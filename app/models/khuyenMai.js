@@ -1,0 +1,17 @@
+module.exports = (sequelize, DataTypes) => {
+  return sequelize.define(
+    "KhuyenMai",
+    {
+      ma: { type: DataTypes.STRING(50), unique: true, allowNull: false },
+      moTa: { type: DataTypes.TEXT },
+      phanTramGiam: { type: DataTypes.INTEGER, allowNull: false },
+      ngayBatDau: { type: DataTypes.DATEONLY, allowNull: false },
+      ngayKetThuc: { type: DataTypes.DATEONLY, allowNull: false },
+      hoatDong: { type: DataTypes.BOOLEAN, defaultValue: true },
+    },
+    {
+      tableName: "khuyenMai",
+      timestamps: false,
+    }
+  );
+};
