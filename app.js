@@ -18,5 +18,6 @@ app.use("/uploads", express.static(path.join(__dirname, "app/uploads")));
 // Routes
 app.use("/api/auth", require("./app/routes/auth.routes"));
 app.use("/api/movie", require("./app/routes/phim.routes"));
+app.use("/api/rap", require("./app/routes/rap.routes"));
 // Export app cho server.js dùng
 module.exports = app;
