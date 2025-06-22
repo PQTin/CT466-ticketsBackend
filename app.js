@@ -15,11 +15,8 @@ app.use(express.urlencoded({ extended: true }));
 // file tĩnh
 app.use("/uploads", express.static(path.join(__dirname, "app/uploads")));
 
-// Import router
-const authRoutes = require("./app/routes/auth.routes");
-
 // Routes
-app.use("/api/auth", authRoutes);
-
+app.use("/api/auth", require("./app/routes/auth.routes"));
+app.use("/api/movie", require("./app/routes/phim.routes"));
 // Export app cho server.js dùng
 module.exports = app;

@@ -6,6 +6,14 @@ module.exports = (sequelize, DataTypes) => {
       moTa: { type: DataTypes.TEXT },
       thoiLuong: { type: DataTypes.INTEGER, allowNull: false },
       ngayKhoiChieu: { type: DataTypes.DATEONLY, allowNull: false },
+      daXoa: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      thoiDiemXoa: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
       tableName: "phim",
