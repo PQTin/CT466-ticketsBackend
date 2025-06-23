@@ -5,7 +5,7 @@ const { verifyToken, isAdmin } = require("../middlewares/auth.middleware");
 const { uploadPoster } = require("../middlewares/upload");
 
 router.post(
-  "/create",
+  "/",
   uploadPoster.array("poster"),
   verifyToken,
   isAdmin,
@@ -18,12 +18,7 @@ router.put(
   isAdmin,
   phimController.updateMovie
 );
-router.delete(
-  "/soft-delete/:id",
-  verifyToken,
-  isAdmin,
-  phimController.softDeleteMovie
-);
+router.delete("/:id", verifyToken, isAdmin, phimController.softDeleteMovie);
 router.get("/all-movies", phimController.getAllMovies);
 router.get("/movies-by-genre/:theLoaiId", phimController.getMoviesByGenre);
 

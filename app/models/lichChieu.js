@@ -7,6 +7,10 @@ module.exports = (sequelize, DataTypes) => {
       batDau: { type: DataTypes.DATE, allowNull: false },
       ketThuc: { type: DataTypes.DATE, allowNull: false },
       giaVe: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+      daXoa: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       tableName: "lichChieu",

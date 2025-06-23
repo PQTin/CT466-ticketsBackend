@@ -12,7 +12,8 @@ module.exports = (sequelize, DataTypes) => {
           "unused",
           "used",
           "expired",
-          "refunded"
+          "refunded",
+          "cancelled"
         ),
         defaultValue: "pending",
       },
