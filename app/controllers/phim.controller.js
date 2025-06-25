@@ -1,9 +1,10 @@
 const db = require("../models");
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 const Phim = db.Phim;
 const TheLoai = db.TheLoai;
 const TheLoaiPhim = db.TheLoaiPhim;
 const PhuongTienMedia = db.PhuongTienMedia;
+const DanhGiaPhim = db.DanhGiaPhim;
 const errorHandler = require("../utils/errorHandler");
 const fs = require("fs");
 const path = require("path");
@@ -138,7 +139,36 @@ exports.getAllMovies = async (req, res) => {
       ],
     });
 
-    res.json({ success: true, data: danhSach });
+    // Lấy điểm trung bình và số đánh giá cho mỗi phim
+    const danhGia = await DanhGiaPhim.findAll({
+      where: { binhLuanChaId: null },
+      attributes: [
+        "phimId",
+        [Sequelize.fn("AVG", Sequelize.col("diem")), "diemTrungBinh"],
+        [Sequelize.fn("COUNT", Sequelize.col("id")), "soDanhGia"],
+      ],
+      group: ["phimId"],
+    });
+
+    const diemMap = {};
+    danhGia.forEach((dg) => {
+      diemMap[dg.phimId] = {
+        diemTrungBinh: parseFloat(dg.get("diemTrungBinh")).toFixed(1),
+        soDanhGia: parseInt(dg.get("soDanhGia")),
+      };
+    });
+
+    // Gắn điểm vào phim
+    const danhSachCoDiem = danhSach.map((phim) => {
+      const diem = diemMap[phim.id] || { diemTrungBinh: "5.0", soDanhGia: 0 };
+      return {
+        ...phim.toJSON(),
+        diemTrungBinh: diem.diemTrungBinh,
+        soDanhGia: diem.soDanhGia,
+      };
+    });
+
+    res.json({ success: true, data: danhSachCoDiem });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -161,7 +191,39 @@ exports.getMoviesByGenre = async (req, res) => {
     if (!theLoai)
       return res.status(404).json({ message: "Không tìm thấy thể loại" });
 
-    res.json({ success: true, data: theLoai.Phims });
+    const phimIds = theLoai.Phims.map((p) => p.id);
+
+    const danhGia = await DanhGiaPhim.findAll({
+      where: {
+        binhLuanChaId: null,
+        phimId: phimIds,
+      },
+      attributes: [
+        "phimId",
+        [Sequelize.fn("AVG", Sequelize.col("diem")), "diemTrungBinh"],
+        [Sequelize.fn("COUNT", Sequelize.col("id")), "soDanhGia"],
+      ],
+      group: ["phimId"],
+    });
+
+    const diemMap = {};
+    danhGia.forEach((dg) => {
+      diemMap[dg.phimId] = {
+        diemTrungBinh: parseFloat(dg.get("diemTrungBinh")).toFixed(1),
+        soDanhGia: parseInt(dg.get("soDanhGia")),
+      };
+    });
+
+    const danhSachCoDiem = theLoai.Phims.map((phim) => {
+      const diem = diemMap[phim.id] || { diemTrungBinh: "5.0", soDanhGia: 0 };
+      return {
+        ...phim.toJSON(),
+        diemTrungBinh: diem.diemTrungBinh,
+        soDanhGia: diem.soDanhGia,
+      };
+    });
+
+    res.json({ success: true, data: danhSachCoDiem });
   } catch (error) {
     errorHandler(res, error);
   }
