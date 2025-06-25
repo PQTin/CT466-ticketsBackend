@@ -23,7 +23,7 @@ app.use("/api/showtime", require("./app/routes/lichChieu.routes"));
 app.use("/api/promotion", require("./app/routes/kMGiamGia.routes"));
 app.use("/api/user", require("./app/routes/nguoiDung.routes"));
 app.use("/api/bookTicket", require("./app/routes/daVe.routes"));
-// app.use("/api/ticket", require("./app/routes/ve.routes"));
+app.use("/api/ticket", require("./app/routes/ve.routes"));
 
 // Export app cho server.js dùng
 module.exports = app;
