@@ -6,6 +6,11 @@ module.exports = (sequelize, DataTypes) => {
       gheId: { type: DataTypes.INTEGER, allowNull: false },
       lichChieuId: { type: DataTypes.INTEGER, allowNull: false },
       gia: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+      giaGoc: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+      maGiamGiaSuDung: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
       trangThai: {
         type: DataTypes.ENUM(
           "pending",
@@ -20,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       daThanhToan: { type: DataTypes.BOOLEAN, defaultValue: false },
       muaLuc: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
       maQR: { type: DataTypes.STRING(255) },
+      tenLoaiGhe: { type: DataTypes.STRING(50), allowNull: true },
     },
     {
       tableName: "ve",

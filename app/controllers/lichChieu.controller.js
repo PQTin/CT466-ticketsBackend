@@ -1,7 +1,6 @@
 const db = require("../models");
 const { Op } = require("sequelize");
-const { errorHandler } = require("../utils/errorHandler");
-
+const errorHandler = require("../utils/errorHandler");
 const LichChieu = db.LichChieu;
 const Ve = db.Ve;
 const Ghe = db.Ghe;
