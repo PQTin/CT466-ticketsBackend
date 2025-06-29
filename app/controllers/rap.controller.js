@@ -20,7 +20,7 @@ exports.createBranch = async (req, res) => {
 
 exports.getAllBranch = async (req, res) => {
   try {
-    const danhSach = await ChiNhanh.findAll();
+    const danhSach = await ChiNhanh.findAll({ where: { daXoa: false } });
     res.json({ success: true, data: danhSach });
   } catch (error) {
     errorHandler(res, error);
@@ -61,7 +61,20 @@ exports.createRoom = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Chi nhánh không tồn tại" });
     }
+    const existing = await PhongChieu.findOne({
+      where: {
+        chiNhanhId,
+        ten,
+        daXoa: false,
+      },
+    });
 
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Tên phòng đã tồn tại trong chi nhánh này",
+      });
+    }
     const phongChieu = await PhongChieu.create({ chiNhanhId, ten, tongSoGhe });
 
     const gheArray = [];
@@ -132,7 +145,11 @@ exports.createSeatType = async (req, res) => {
 
 exports.getAllSeatType = async (req, res) => {
   try {
-    const danhSach = await LoaiGhe.findAll();
+    const danhSach = await LoaiGhe.findAll({
+      where: {
+        daXoa: false,
+      },
+    });
     res.json({ success: true, data: danhSach });
   } catch (error) {
     errorHandler(res, error);

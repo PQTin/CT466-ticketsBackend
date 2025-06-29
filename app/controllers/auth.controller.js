@@ -61,11 +61,12 @@ exports.login = async (req, res) => {
     const { tenDangNhap, matKhau } = req.body;
 
     const user = await User.findOne({ where: { tenDangNhap } });
-    if (!user)
-      return res.status(404).json({ message: "Người dùng không tồn tại" });
-
-    const isMatch = await bcrypt.compare(matKhau, user.matKhau);
-    if (!isMatch) return res.status(401).json({ message: "Sai mật khẩu" });
+    const isMatch = user ? await bcrypt.compare(matKhau, user.matKhau) : false;
+    if (!user || !isMatch) {
+      return res
+        .status(401)
+        .json({ message: "Tên đăng nhập hoặc mật khẩu không đúng!" });
+    }
 
     const token = jwt.sign(
       { user_id: user.id, vaiTro: user.vaiTro },
