@@ -18,8 +18,17 @@ exports.createMovie = async (req, res) => {
 
     const phim = await Phim.create({ ten, moTa, thoiLuong, ngayKhoiChieu });
 
-    if (Array.isArray(theLoaiIds) && theLoaiIds.length > 0) {
-      const theLoais = await TheLoai.findAll({ where: { id: theLoaiIds } });
+    let ids = theLoaiIds;
+
+    // Ép về mảng nếu chỉ gửi 1 thể loại (gặp khi dùng FormData)
+    if (typeof ids === "string" || typeof ids === "number") {
+      ids = [ids];
+    } else if (!Array.isArray(ids)) {
+      ids = [];
+    }
+
+    if (ids.length > 0) {
+      const theLoais = await TheLoai.findAll({ where: { id: ids } });
       await phim.setTheLoais(theLoais);
     }
 
@@ -27,7 +36,7 @@ exports.createMovie = async (req, res) => {
       const posterRecords = posters.map((file) => ({
         phimId: phim.id,
         loai: "poster",
-        duongDan: `poster/${file.filename}`,
+        duongDan: `posters/${file.filename}`,
       }));
       await PhuongTienMedia.bulkCreate(posterRecords);
     }
@@ -59,8 +68,17 @@ exports.updateMovie = async (req, res) => {
 
     await phim.update({ ten, moTa, thoiLuong, ngayKhoiChieu });
 
-    if (Array.isArray(theLoaiIds)) {
-      const theLoais = await TheLoai.findAll({ where: { id: theLoaiIds } });
+    let ids = theLoaiIds;
+
+    // Ép về mảng nếu chỉ gửi 1 thể loại (gặp khi dùng FormData)
+    if (typeof ids === "string" || typeof ids === "number") {
+      ids = [ids];
+    } else if (!Array.isArray(ids)) {
+      ids = [];
+    }
+
+    if (ids.length > 0) {
+      const theLoais = await TheLoai.findAll({ where: { id: ids } });
       await phim.setTheLoais(theLoais);
     }
 
@@ -99,7 +117,7 @@ exports.updateMovie = async (req, res) => {
       const posterRecords = posters.map((file) => ({
         phimId: phim.id,
         loai: "poster",
-        duongDan: `poster/${file.filename}`,
+        duongDan: `posters/${file.filename}`,
       }));
       await PhuongTienMedia.bulkCreate(posterRecords);
     }
@@ -275,5 +293,16 @@ exports.deleteGenre = async (req, res) => {
     res.json({ success: true, message: "Đã xóa thể loại thành công" });
   } catch (error) {
     errorHandler(res, error);
+  }
+};
+// Lấy tất cả thể loại
+exports.getAllGenres = async (req, res) => {
+  try {
+    const danhSach = await TheLoai.findAll({
+      order: [["ten", "ASC"]],
+    });
+    res.json({ success: true, data: danhSach });
+  } catch (err) {
+    errorHandler(res, err);
   }
 };
