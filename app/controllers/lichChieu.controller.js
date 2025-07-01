@@ -11,7 +11,7 @@ const NguoiDung = db.NguoiDung;
 const Combo = db.Combo;
 const LoaiGhe = db.LoaiGhe;
 const Phim = db.Phim;
-
+const PhuongTienMedia = db.PhuongTienMedia;
 // Tạo lịch chiếu mới
 exports.createShowtime = async (req, res) => {
   try {
@@ -70,7 +70,19 @@ exports.createShowtime = async (req, res) => {
 exports.getAllShowtimesAdmin = async (req, res) => {
   try {
     const list = await LichChieu.findAll({
-      include: [{ model: PhongChieu, include: [ChiNhanh] }, { model: Phim }],
+      include: [
+        { model: PhongChieu, include: [ChiNhanh] },
+        {
+          model: Phim,
+          include: [
+            {
+              model: PhuongTienMedia,
+              where: { loai: "poster" },
+              required: false,
+            },
+          ],
+        },
+      ],
       order: [["batDau", "ASC"]],
     });
     res.json({ success: true, data: list });
@@ -87,7 +99,19 @@ exports.getAllShowtimesClient = async (req, res) => {
         daXoa: false,
         batDau: { [Op.gt]: new Date() },
       },
-      include: [{ model: PhongChieu, include: [ChiNhanh] }, { model: Phim }],
+      include: [
+        { model: PhongChieu, include: [ChiNhanh] },
+        {
+          model: Phim,
+          include: [
+            {
+              model: PhuongTienMedia,
+              where: { loai: "poster" },
+              required: false,
+            },
+          ],
+        },
+      ],
       order: [["batDau", "ASC"]],
     });
     res.json({ success: true, data: list });
@@ -125,12 +149,13 @@ exports.updateShowtime = async (req, res) => {
         .json({ success: false, message: "Không tìm thấy lịch chiếu." });
 
     const now = new Date();
-    const batDauMoi = new Date(batDau);
-    const diffHours = (batDauMoi - now) / (1000 * 60 * 60);
+    const batDauCu = new Date(lichChieu.batDau);
+    const diffHours = (batDauCu - now) / (1000 * 60 * 60);
     if (diffHours < 24) {
       return res.status(400).json({
         success: false,
-        message: "Thời gian bắt đầu mới phải cách ít nhất 24h.",
+        message:
+          "Suất chiếu sắp bắt đầu trong vòng 24 giờ. Không thể cập nhật.",
       });
     }
     const conflict = await LichChieu.findOne({
@@ -296,51 +321,84 @@ exports.getSeatByShowtime = async (req, res) => {
 exports.createCombo = async (req, res) => {
   try {
     const { ten, moTa, gia } = req.body;
-    const combo = await Combo.create({ ten, moTa, gia });
+
+    const filePath = req.file ? `combos/${req.file.filename}` : null;
+
+    const combo = await Combo.create({
+      ten,
+      moTa,
+      gia,
+      duongDanAnh: filePath,
+    });
+
     res.json({ success: true, data: combo });
   } catch (error) {
     errorHandler(res, error);
   }
 };
 
-//Lấy tất cả combo
+// Lấy tất cả combo chưa bị xoá
 exports.getAllCombo = async (req, res) => {
   try {
-    const combos = await Combo.findAll({ where: { daXoa: false } });
+    const combos = await Combo.findAll({
+      where: { daXoa: false },
+      order: [["id", "DESC"]],
+    });
     res.json({ success: true, data: combos });
   } catch (error) {
     errorHandler(res, error);
   }
 };
 
-//Cập nhật combo
-exports.updateCombo = async (req, res) => {
+// Xoá mềm combo
+exports.deleteCombo = async (req, res) => {
   try {
     const { id } = req.params;
-    const { ten, moTa, gia } = req.body;
     const combo = await Combo.findByPk(id);
-    if (!combo)
+
+    if (!combo) {
       return res
         .status(404)
         .json({ success: false, message: "Không tìm thấy combo" });
-    await combo.update({ ten, moTa, gia });
-    res.json({ success: true, data: combo });
+    }
+
+    await combo.update({ daXoa: true });
+    res.json({ success: true, message: "Combo đã được ẩn" });
   } catch (error) {
     errorHandler(res, error);
   }
 };
 
-// Xóa combo mềm
-exports.deleteCombo = async (req, res) => {
+//lấy tên phim
+exports.getNameMovies = async (req, res) => {
   try {
-    const { id } = req.params;
-    const combo = await Combo.findByPk(id);
-    if (!combo)
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy combo" });
-    await combo.update({ daXoa: true });
-    res.json({ success: true, message: "Combo đã được ẩn." });
+    const movies = await Phim.findAll({
+      where: { daXoa: false },
+      attributes: ["id", "ten"], // chỉ lấy id và tên phim
+    });
+
+    res.json({ success: true, data: movies });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+};
+// lấy chi nhánh và phòng chiếu
+exports.getNameBranch = async (req, res) => {
+  try {
+    const danhSach = await ChiNhanh.findAll({
+      where: { daXoa: false },
+      attributes: ["id", "ten"],
+      include: [
+        {
+          model: PhongChieu,
+          where: { daXoa: false },
+          required: false,
+          attributes: ["id", "ten"],
+        },
+      ],
+    });
+
+    res.json({ success: true, data: danhSach });
   } catch (error) {
     errorHandler(res, error);
   }

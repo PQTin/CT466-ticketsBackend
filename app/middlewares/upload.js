@@ -27,5 +27,5 @@ const createMulter = (folder) => {
 // Tạo middleware upload riêng cho avatar và poster
 const uploadAvatar = createMulter("avatars").single("avatar");
 const uploadPoster = createMulter("posters");
-
-module.exports = { uploadAvatar, uploadPoster };
+const uploadCombo = createMulter("combos").single("combo");
+module.exports = { uploadAvatar, uploadPoster, uploadCombo };
