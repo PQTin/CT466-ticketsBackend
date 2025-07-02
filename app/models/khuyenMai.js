@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       phanTramGiam: { type: DataTypes.INTEGER, allowNull: false },
       ngayBatDau: { type: DataTypes.DATEONLY, allowNull: false },
       ngayKetThuc: { type: DataTypes.DATEONLY, allowNull: false },
+      duongDanAnh: { type: DataTypes.STRING(255), allowNull: true },
       hoatDong: { type: DataTypes.BOOLEAN, defaultValue: true },
     },
     {

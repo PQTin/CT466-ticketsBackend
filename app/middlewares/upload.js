@@ -28,4 +28,5 @@ const createMulter = (folder) => {
 const uploadAvatar = createMulter("avatars").single("avatar");
 const uploadPoster = createMulter("posters");
 const uploadCombo = createMulter("combos").single("combo");
-module.exports = { uploadAvatar, uploadPoster, uploadCombo };
+const uploadPromotion = createMulter("promotions").single("promotion");
+module.exports = { uploadAvatar, uploadPoster, uploadCombo, uploadPromotion };

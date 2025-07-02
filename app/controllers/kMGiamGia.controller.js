@@ -1,4 +1,5 @@
 const db = require("../models");
+const { Op } = require("sequelize");
 const errorHandler = require("../utils/errorHandler");
 
 const KhuyenMai = db.KhuyenMai;
@@ -11,6 +12,7 @@ exports.createPromotion = async (req, res) => {
   try {
     const { ma, moTa, phanTramGiam, loaiApDung, ngayBatDau, ngayKetThuc } =
       req.body;
+    const duongDanAnh = req.file ? `promotions/${req.file.filename}` : null;
 
     const km = await KhuyenMai.create({
       ma,
@@ -19,6 +21,7 @@ exports.createPromotion = async (req, res) => {
       loaiApDung,
       ngayBatDau,
       ngayKetThuc,
+      duongDanAnh,
       hoatDong: true,
     });
 
@@ -174,12 +177,135 @@ exports.getUserDiscountCodes = async (req, res) => {
     const nguoiDungId = req.user.user_id;
 
     const maList = await MaGiamGia.findAll({
-      where: { nguoiDungId },
-      include: [KhuyenMai],
+      where: {
+        nguoiDungId,
+        daDung: false,
+      },
+      include: [
+        {
+          model: KhuyenMai,
+          where: {
+            hoatDong: true,
+            ngayKetThuc: {
+              [Op.gte]: new Date(),
+            },
+          },
+        },
+      ],
       order: [["taoLuc", "DESC"]],
     });
 
-    res.json({ success: true, data: maList });
+    res.json({
+      success: true,
+      data: maList.map((ma) => ({
+        ...ma.toJSON(),
+        ngayKetThuc: ma.KhuyenMai.ngayKetThuc,
+      })),
+    });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+};
+
+// lấy tất cả mả giảm giá theo id khuyến mãi
+exports.getAllCodesByPromotion = async (req, res) => {
+  try {
+    const { khuyenMaiId } = req.params;
+
+    const khuyenMai = await KhuyenMai.findByPk(khuyenMaiId);
+    if (!khuyenMai) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy khuyến mãi",
+      });
+    }
+
+    const codes = await MaGiamGia.findAll({
+      where: { khuyenMaiId },
+      include: [
+        {
+          model: NguoiDung,
+          attributes: ["id", "tenDangNhap", "email"],
+        },
+      ],
+      order: [["taoLuc", "DESC"]],
+    });
+
+    res.json({
+      success: true,
+      data: codes.map((code) => ({
+        id: code.id,
+        ma: code.ma,
+        daDung: code.daDung,
+        taoLuc: code.taoLuc,
+        suDungLuc: code.suDungLuc,
+        nguoiDung: code.NguoiDung,
+      })),
+    });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+};
+
+// lấy ds người dùng theo loại lọc
+exports.getUsersByGroup = async (req, res) => {
+  try {
+    const { loai, khuyenMaiId } = req.params;
+
+    let condition = { vaiTro: "client" };
+    const now = new Date();
+
+    if (loai === "moi") {
+      // Người mới: tạo chưa quá 7 ngày
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      condition.taoLuc = { [Op.gte]: weekAgo };
+    }
+
+    const allUsers = await NguoiDung.findAll({
+      where: condition,
+      attributes: ["id", "tenDangNhap", "email"],
+    });
+
+    let filteredUsers = [];
+
+    switch (loai) {
+      case "chuaCoMa":
+        const maList = await MaGiamGia.findAll({
+          where: { khuyenMaiId },
+          attributes: ["nguoiDungId"],
+        });
+        const usedIds = maList.map((m) => m.nguoiDungId);
+        filteredUsers = allUsers.filter((u) => !usedIds.includes(u.id));
+        break;
+
+      case "chuaMua":
+        const buyers = await db.Ve.findAll({
+          attributes: ["nguoiDungId"],
+          group: ["nguoiDungId"],
+        });
+        const buyerIds = buyers.map((v) => v.nguoiDungId);
+        filteredUsers = allUsers.filter((u) => !buyerIds.includes(u.id));
+        break;
+
+      case "lauNam":
+        const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        filteredUsers = allUsers.filter(
+          (u) => new Date(u.taoLuc) <= oneYearAgo
+        );
+        break;
+
+      case "tatCa":
+      case "moi":
+        filteredUsers = allUsers;
+        break;
+
+      default:
+        return res
+          .status(400)
+          .json({ success: false, message: "Loại lọc không hợp lệ" });
+    }
+
+    res.json({ success: true, data: filteredUsers });
   } catch (error) {
     errorHandler(res, error);
   }

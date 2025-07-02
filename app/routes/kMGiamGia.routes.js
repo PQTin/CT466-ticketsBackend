@@ -2,8 +2,15 @@ const express = require("express");
 const router = express.Router();
 const promoController = require("../controllers/kMGiamGia.controller");
 const { verifyToken, isAdmin } = require("../middlewares/auth.middleware");
+const { uploadPromotion } = require("../middlewares/upload");
 
-router.post("/", verifyToken, isAdmin, promoController.createPromotion);
+router.post(
+  "/",
+  uploadPromotion,
+  verifyToken,
+  isAdmin,
+  promoController.createPromotion
+);
 router.put(
   "/status/:id",
   verifyToken,
@@ -25,5 +32,16 @@ router.post(
   promoController.issueCodesToUserGroup
 );
 router.get("/my-codes", verifyToken, promoController.getUserDiscountCodes);
-
+router.get(
+  "/codesbyIdPromotion/:khuyenMaiId",
+  verifyToken,
+  isAdmin,
+  promoController.getAllCodesByPromotion
+);
+router.get(
+  "/userType/:loai/:khuyenMaiId",
+  verifyToken,
+  isAdmin,
+  promoController.getUsersByGroup
+);
 module.exports = router;
