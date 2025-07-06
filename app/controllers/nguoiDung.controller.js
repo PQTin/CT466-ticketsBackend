@@ -2,7 +2,6 @@ const db = require("../models");
 const errorHandler = require("../utils/errorHandler");
 
 const NguoiDung = db.NguoiDung;
-const DanhGiaPhim = db.DanhGiaPhim;
 const DanhGiaCombo = db.DanhGiaCombo;
 const ThongBao = db.ThongBao;
 
@@ -31,47 +30,6 @@ exports.getAllUsers = async (req, res) => {
       order: [["taoLuc", "DESC"]],
     });
     res.json({ success: true, data: users });
-  } catch (error) {
-    errorHandler(res, error);
-  }
-};
-
-// Người dùng đánh giá phim hoặc phản hồi
-exports.rateMovie = async (req, res) => {
-  try {
-    const nguoiDungId = req.user.user_id;
-    const { phimId, binhLuanChaId, diem, binhLuan } = req.body;
-
-    let finalPhimId = phimId;
-    let finalDiem = diem;
-
-    if (binhLuanChaId) {
-      const cha = await DanhGiaPhim.findByPk(binhLuanChaId);
-      if (!cha) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Không tìm thấy đánh giá cha." });
-      }
-      finalPhimId = cha.phimId;
-      finalDiem = null; // Phản hồi thì không cần điểm
-    } else {
-      if (!phimId || typeof diem !== "number") {
-        return res.status(400).json({
-          success: false,
-          message: "Thiếu phimId hoặc điểm đánh giá.",
-        });
-      }
-    }
-
-    const danhGia = await DanhGiaPhim.create({
-      nguoiDungId,
-      phimId: finalPhimId,
-      binhLuanChaId: binhLuanChaId || null,
-      diem: finalDiem,
-      binhLuan,
-    });
-
-    res.json({ success: true, data: danhGia });
   } catch (error) {
     errorHandler(res, error);
   }

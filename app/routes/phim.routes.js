@@ -21,6 +21,11 @@ router.put(
 router.delete("/:id", verifyToken, isAdmin, phimController.softDeleteMovie);
 router.get("/all-movies", phimController.getAllMovies);
 router.get("/movies-by-genre/:theLoaiId", phimController.getMoviesByGenre);
+router.get("/movie-by-id/:id", phimController.getMovieById);
+router.get("/showtimes-by-id/:id", phimController.getShowtimesByMovieId);
+
+router.get("/comments-by-id/:id", phimController.getCommentsByMovieId);
+router.post("/rate-movie", verifyToken, phimController.rateMovie);
 
 router.post("/genre", verifyToken, isAdmin, phimController.createGenre);
 router.put("/genre/:id", verifyToken, isAdmin, phimController.updateGenre);
