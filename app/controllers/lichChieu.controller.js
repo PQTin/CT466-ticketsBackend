@@ -91,6 +91,8 @@ exports.getAllShowtimesAdmin = async (req, res) => {
   }
 };
 
+const { fn, col } = require("sequelize");
+
 // Lấy tất cả lịch chiếu cho người dùng
 exports.getAllShowtimesClient = async (req, res) => {
   try {
@@ -100,21 +102,61 @@ exports.getAllShowtimesClient = async (req, res) => {
         batDau: { [Op.gt]: new Date() },
       },
       include: [
-        { model: PhongChieu, include: [ChiNhanh] },
+        {
+          model: PhongChieu,
+          include: [ChiNhanh],
+        },
         {
           model: Phim,
           include: [
             {
               model: PhuongTienMedia,
-              where: { loai: "poster" },
               required: false,
             },
           ],
         },
+        {
+          model: Ve,
+          required: false,
+          attributes: [],
+          where: {
+            trangThai: {
+              [Op.notIn]: ["refunded", "cancelled"],
+            },
+          },
+        },
+      ],
+      attributes: {
+        include: [
+          // thêm số vẽ đã đặt bằng COUNT
+          [fn("COUNT", col("Ves.id")), "soVeDaDat"],
+        ],
+      },
+      group: [
+        "LichChieu.id",
+        "PhongChieu.id",
+        "PhongChieu->ChiNhanh.id",
+        "Phim.id",
+        "Phim->PhuongTienMedia.id",
       ],
       order: [["batDau", "ASC"]],
     });
-    res.json({ success: true, data: list });
+
+    // Tính số ghế trống
+    const resultWithSeatCount = list.map((lichChieu) => {
+      const lich = lichChieu.toJSON();
+      const tongSoGhe = lich.PhongChieu?.tongSoGhe || 0;
+      const soVeDaDat = parseInt(lich.soVeDaDat) || 0;
+      const soGheTrong = tongSoGhe - soVeDaDat;
+
+      delete lich.Ves;
+      return {
+        ...lich,
+        soGheTrong,
+      };
+    });
+
+    res.json({ success: true, data: resultWithSeatCount });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -124,13 +166,35 @@ exports.getAllShowtimesClient = async (req, res) => {
 exports.getShowtimeById = async (req, res) => {
   try {
     const lichChieu = await LichChieu.findByPk(req.params.id, {
-      include: [PhongChieu, Phim],
+      include: [
+        {
+          model: PhongChieu,
+          include: ["ChiNhanh"],
+        },
+        {
+          model: Phim,
+        },
+      ],
     });
-    if (!lichChieu)
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy lịch chiếu." });
-    res.json({ success: true, data: lichChieu });
+
+    if (!lichChieu) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy lịch chiếu.",
+      });
+    }
+
+    const result = {
+      idLichChieu: lichChieu.id,
+      batDau: lichChieu.batDau,
+      ketThuc: lichChieu.ketThuc,
+      giaVe: lichChieu.giaVe,
+      tenPhim: lichChieu.Phim?.ten || "",
+      tenPhong: lichChieu.PhongChieu?.ten || "",
+      tenChiNhanh: lichChieu.PhongChieu?.ChiNhanh?.ten || "",
+    };
+
+    res.json({ success: true, data: result });
   } catch (error) {
     errorHandler(res, error);
   }

@@ -324,3 +324,97 @@ exports.addComboToTicket = async (req, res) => {
     errorHandler(res, error);
   }
 };
+
+exports.paymentCalculator = async (req, res) => {
+  try {
+    const { lichChieuId, gheId, comboList = [], maGiamGia = null } = req.body;
+    const nguoiDungId = req.user.user_id;
+
+    const [lichChieu, ghe] = await Promise.all([
+      LichChieu.findByPk(lichChieuId),
+      Ghe.findByPk(gheId, { include: [LoaiGhe] }),
+    ]);
+
+    if (!lichChieu || !ghe) {
+      return res.status(404).json({
+        success: false,
+        message: "Lịch chiếu hoặc ghế không tồn tại.",
+      });
+    }
+
+    const giaVeGoc =
+      parseFloat(lichChieu.giaVe) + parseFloat(ghe.LoaiGhe?.giaPhu || 0);
+
+    let tongCombo = 0;
+    for (const c of comboList) {
+      if (c.soLuong <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Số lượng combo không hợp lệ.",
+        });
+      }
+      const combo = await Combo.findByPk(c.comboId);
+      if (!combo || combo.daXoa) {
+        return res.status(400).json({
+          success: false,
+          message: `Combo không tồn tại: ${c.comboId}`,
+        });
+      }
+      tongCombo += combo.gia * c.soLuong;
+    }
+
+    let tongTruocGiam = giaVeGoc + tongCombo;
+    let tongSauGiam = tongTruocGiam;
+    let giamGia = 0;
+    let trangThaiMa = "none";
+
+    if (maGiamGia) {
+      const ma = await MaGiamGia.findOne({
+        where: { ma: maGiamGia, nguoiDungId, daDung: false },
+        include: [{ model: KhuyenMai }],
+      });
+
+      const now = new Date();
+      const km = ma?.KhuyenMai;
+
+      if (
+        !ma ||
+        !km ||
+        !km.hoatDong ||
+        now < new Date(km.ngayBatDau) ||
+        now > new Date(km.ngayKetThuc)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Mã giảm giá không hợp lệ hoặc đã hết hạn.",
+        });
+      }
+
+      let giam = 0;
+      if (["ve", "all"].includes(km.loaiApDung)) {
+        giam += (giaVeGoc * km.phanTramGiam) / 100;
+      }
+      if (["combo", "all"].includes(km.loaiApDung)) {
+        giam += (tongCombo * km.phanTramGiam) / 100;
+      }
+
+      giamGia = Math.floor(giam);
+      tongSauGiam = tongTruocGiam - giamGia;
+      trangThaiMa = "valid";
+    }
+
+    res.json({
+      success: true,
+      data: {
+        giaVeGoc,
+        tongCombo,
+        tongTruocGiam,
+        giamGia,
+        tongSauGiam,
+        trangThaiMa,
+      },
+    });
+  } catch (err) {
+    errorHandler(res, err);
+  }
+};

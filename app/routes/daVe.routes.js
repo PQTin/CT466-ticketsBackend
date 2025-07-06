@@ -5,5 +5,10 @@ const { verifyToken } = require("../middlewares/auth.middleware");
 
 router.post("/", verifyToken, datVeController.bookTicket);
 router.post("/addCombo", verifyToken, datVeController.addComboToTicket);
+router.post(
+  "/calculate-payment",
+  verifyToken,
+  datVeController.paymentCalculator
+);
 
 module.exports = router;
