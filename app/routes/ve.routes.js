@@ -21,4 +21,10 @@ router.put(
 
 router.put("/cancel/:veId", verifyToken, ticketController.cancelTicket);
 
+router.get(
+  "/combo-by-id/:veId",
+  verifyToken,
+  isAdmin,
+  ticketController.getCombosByTicketId
+);
 module.exports = router;

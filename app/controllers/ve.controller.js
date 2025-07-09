@@ -37,12 +37,45 @@ exports.getTicketsByUser = async (req, res) => {
 exports.getAllTicketsAdmin = async (req, res) => {
   try {
     const tickets = await Ve.findAll({
+      attributes: [
+        "id",
+        "maQR",
+        "gia",
+        "giaGoc",
+        "trangThai",
+        "daThanhToan",
+        "muaLuc",
+        "tenLoaiGhe",
+        "maGiamGiaSuDung",
+      ],
       include: [
-        db.NguoiDung,
-        db.Ghe,
         {
-          model: db.LichChieu,
-          include: [db.Phim, db.PhongChieu],
+          model: db.NguoiDung,
+          attributes: ["id", "tenDangNhap", "email"],
+        },
+        {
+          model: Ghe,
+          attributes: ["hang", "cot"],
+        },
+        {
+          model: LichChieu,
+          attributes: ["batDau", "ketThuc"],
+          include: [
+            {
+              model: db.Phim,
+              attributes: ["ten"],
+            },
+            {
+              model: db.PhongChieu,
+              attributes: ["ten"],
+              include: [
+                {
+                  model: db.ChiNhanh,
+                  attributes: ["ten"],
+                },
+              ],
+            },
+          ],
         },
       ],
       order: [["muaLuc", "DESC"]],
@@ -297,6 +330,30 @@ exports.cancelTicket = async (req, res) => {
     res.json({ success: true, message: "Vé đã được hủy thành công." });
   } catch (error) {
     await t.rollback();
+    errorHandler(res, error);
+  }
+};
+
+// lấy combo vé theo id vé
+exports.getCombosByTicketId = async (req, res) => {
+  try {
+    const { veId } = req.params;
+
+    const combos = await db.ComboVe.findAll({
+      where: { veId },
+      include: [
+        {
+          model: db.Combo,
+          attributes: ["ten", "duongDanAnh", "moTa"],
+        },
+      ],
+    });
+
+    res.json({
+      success: true,
+      data: combos,
+    });
+  } catch (error) {
     errorHandler(res, error);
   }
 };
