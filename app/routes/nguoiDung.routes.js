@@ -10,4 +10,10 @@ router.post("/rate-combo", verifyToken, userController.rateCombo);
 
 router.get("/notifications", verifyToken, userController.getUserNotifications);
 
+router.post(
+  "/sendNotification",
+  verifyToken,
+  isAdmin,
+  userController.sendNotification
+);
 module.exports = router;

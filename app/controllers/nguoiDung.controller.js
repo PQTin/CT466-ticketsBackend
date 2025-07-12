@@ -73,3 +73,37 @@ exports.getUserNotifications = async (req, res) => {
     errorHandler(res, error);
   }
 };
+
+// Gửi thông báo cho người dùng
+exports.sendNotification = async (req, res) => {
+  try {
+    const { nguoiDungIds, tieuDe, noiDung } = req.body;
+
+    if (
+      !Array.isArray(nguoiDungIds) ||
+      nguoiDungIds.length === 0 ||
+      !tieuDe ||
+      !noiDung
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu danh sách người dùng, tiêu đề hoặc nội dung.",
+      });
+    }
+
+    const notifications = nguoiDungIds.map((id) => ({
+      nguoiDungId: id,
+      tieuDe,
+      noiDung,
+    }));
+
+    const result = await db.ThongBao.bulkCreate(notifications);
+
+    res.json({
+      success: true,
+      message: `Đã gửi thông báo cho ${result.length} người dùng.`,
+    });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+};
