@@ -10,7 +10,7 @@ router.get(
   isAdmin,
   showtimeController.getAllShowtimesAdmin
 );
-router.get("/client", showtimeController.getAllShowtimesClient);
+router.get("/withFilters", showtimeController.getShowtimesWithFilters);
 router.get("/byId/:id", showtimeController.getShowtimeById);
 router.put("/:id", verifyToken, isAdmin, showtimeController.updateShowtime);
 router.delete("/:id", verifyToken, isAdmin, showtimeController.deleteShowtime);

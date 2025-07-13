@@ -1,5 +1,5 @@
 const db = require("../models");
-const { Op } = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 const errorHandler = require("../utils/errorHandler");
 const LichChieu = db.LichChieu;
 const Ve = db.Ve;
@@ -91,21 +91,45 @@ exports.getAllShowtimesAdmin = async (req, res) => {
   }
 };
 
-const { fn, col } = require("sequelize");
-
 // Lấy tất cả lịch chiếu cho người dùng
-exports.getAllShowtimesClient = async (req, res) => {
+exports.getShowtimesWithFilters = async (req, res) => {
   try {
-    const list = await LichChieu.findAll({
-      where: {
-        daXoa: false,
-        batDau: { [Op.gt]: new Date() },
-      },
+    const { chiNhanhId, trong24h, trongTuan } = req.query;
+
+    const now = new Date();
+    let batDauCondition;
+
+    if (trong24h === "true") {
+      const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      batDauCondition = { [Op.between]: [now, next24h] };
+    } else if (trongTuan === "true") {
+      const endOfWeek = new Date(now);
+      endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
+      endOfWeek.setHours(23, 59, 59, 999);
+      batDauCondition = { [Op.between]: [now, endOfWeek] };
+    } else {
+      batDauCondition = { [Op.gt]: now };
+    }
+
+    const whereClause = {
+      daXoa: false,
+      batDau: batDauCondition,
+    };
+
+    const includePhongChieu = {
+      model: PhongChieu,
       include: [
         {
-          model: PhongChieu,
-          include: [ChiNhanh],
+          model: ChiNhanh,
+          ...(chiNhanhId ? { where: { id: chiNhanhId } } : {}),
         },
+      ],
+    };
+
+    const list = await LichChieu.findAll({
+      where: whereClause,
+      include: [
+        includePhongChieu,
         {
           model: Phim,
           include: [
@@ -127,10 +151,7 @@ exports.getAllShowtimesClient = async (req, res) => {
         },
       ],
       attributes: {
-        include: [
-          // thêm số vẽ đã đặt bằng COUNT
-          [fn("COUNT", col("Ves.id")), "soVeDaDat"],
-        ],
+        include: [[fn("COUNT", col("Ves.id")), "soVeDaDat"]],
       },
       group: [
         "LichChieu.id",
@@ -142,7 +163,6 @@ exports.getAllShowtimesClient = async (req, res) => {
       order: [["batDau", "ASC"]],
     });
 
-    // Tính số ghế trống
     const resultWithSeatCount = list.map((lichChieu) => {
       const lich = lichChieu.toJSON();
       const tongSoGhe = lich.PhongChieu?.tongSoGhe || 0;

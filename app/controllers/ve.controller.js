@@ -14,19 +14,46 @@ exports.getTicketsByUser = async (req, res) => {
     const nguoiDungId = req.user.user_id;
     const tickets = await Ve.findAll({
       where: { nguoiDungId },
+      attributes: [
+        "id",
+        "maQR",
+        "gia",
+        "giaGoc",
+        "trangThai",
+        "daThanhToan",
+        "muaLuc",
+        "tenLoaiGhe",
+        "maGiamGiaSuDung",
+      ],
       include: [
-        Ghe,
         {
-          model: LichChieu,
-          include: [db.Phim, db.PhongChieu],
+          model: Ghe,
+          attributes: ["hang", "cot"],
         },
         {
-          model: ComboVe,
-          include: [Combo],
+          model: LichChieu,
+          attributes: ["batDau", "ketThuc"],
+          include: [
+            {
+              model: db.Phim,
+              attributes: ["ten"],
+            },
+            {
+              model: db.PhongChieu,
+              attributes: ["ten"],
+              include: [
+                {
+                  model: db.ChiNhanh,
+                  attributes: ["ten"],
+                },
+              ],
+            },
+          ],
         },
       ],
       order: [["muaLuc", "DESC"]],
     });
+
     res.json({ success: true, data: tickets });
   } catch (error) {
     errorHandler(res, error);
@@ -338,7 +365,21 @@ exports.cancelTicket = async (req, res) => {
 exports.getCombosByTicketId = async (req, res) => {
   try {
     const { veId } = req.params;
+    const userId = req.user.user_id;
+    const isAdmin = req.user.vaiTro === "admin";
 
+    const ve = await db.Ve.findByPk(veId);
+
+    if (!ve) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Vé không tồn tại." });
+    }
+    if (!isAdmin && ve.nguoiDungId !== userId) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Không có quyền truy cập." });
+    }
     const combos = await db.ComboVe.findAll({
       where: { veId },
       include: [
