@@ -73,6 +73,55 @@ exports.getUserNotifications = async (req, res) => {
     errorHandler(res, error);
   }
 };
+// lấy số lượng thông báo chưa đọc của người dùng
+exports.getUnreadNotificationCount = async (req, res) => {
+  try {
+    const nguoiDungId = req.user.user_id;
+    const count = await ThongBao.count({
+      where: {
+        nguoiDungId,
+        daDoc: false,
+      },
+    });
+
+    res.json({ success: true, data: count });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+};
+
+// đánh dấu đã đọc cho các thông báo.
+exports.markNotificationsAsRead = async (req, res) => {
+  try {
+    const nguoiDungId = req.user.user_id;
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Danh sách ID không hợp lệ.",
+      });
+    }
+
+    const result = await ThongBao.update(
+      { daDoc: true },
+      {
+        where: {
+          nguoiDungId,
+          id: ids,
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      message: "Đã đánh dấu thông báo là đã đọc.",
+      updated: result[0], // số bản ghi đã cập nhật
+    });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+};
 
 // Gửi thông báo cho người dùng
 exports.sendNotification = async (req, res) => {
