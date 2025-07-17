@@ -10,5 +10,10 @@ router.post(
   verifyToken,
   datVeController.paymentCalculator
 );
+router.post(
+  "/calculate-combo",
+  verifyToken,
+  datVeController.calculateComboTotal
+);
 
 module.exports = router;

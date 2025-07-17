@@ -179,7 +179,6 @@ exports.getUserDiscountCodes = async (req, res) => {
     const maList = await MaGiamGia.findAll({
       where: {
         nguoiDungId,
-        daDung: false,
       },
       include: [
         {

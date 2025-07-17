@@ -105,7 +105,15 @@ exports.updateUser = async (req, res) => {
     const paramId = req.params.id;
     const userId = isAdmin && paramId ? parseInt(paramId) : req.user.user_id;
 
-    const { tenDangNhap, email, soDienThoai, vaiTro, trangThai } = req.body;
+    const {
+      tenDangNhap,
+      email,
+      soDienThoai,
+      vaiTro,
+      trangThai,
+      matKhau,
+      matKhauCu,
+    } = req.body;
 
     const user = await User.findByPk(userId);
     if (!user) {
@@ -113,6 +121,7 @@ exports.updateUser = async (req, res) => {
       return res.status(404).json({ message: "Người dùng không tồn tại" });
     }
 
+    // Người dùng thường không được sửa người khác
     if (!isAdmin && req.user.user_id !== user.id) {
       deleteUploadedFileIfExists(req.file);
       return res
@@ -120,6 +129,7 @@ exports.updateUser = async (req, res) => {
         .json({ message: "Bạn không thể cập nhật thông tin người khác" });
     }
 
+    // Người dùng thường không được đổi vai trò hoặc trạng thái
     if (!isAdmin && (vaiTro || trangThai)) {
       deleteUploadedFileIfExists(req.file);
       return res
@@ -127,6 +137,7 @@ exports.updateUser = async (req, res) => {
         .json({ message: "Không có quyền thay đổi vai trò hoặc trạng thái" });
     }
 
+    // Admin không được tự đổi vai trò/trạng thái của chính mình
     if (
       isAdmin &&
       req.user.user_id === user.id &&
@@ -139,7 +150,7 @@ exports.updateUser = async (req, res) => {
       });
     }
 
-    // Kiểm tra trùng
+    // Kiểm tra trùng tên đăng nhập, email, sđt
     const [usernameExists, phoneExists, emailExists] = await Promise.all([
       tenDangNhap && tenDangNhap !== user.tenDangNhap
         ? User.findOne({ where: { tenDangNhap } })
@@ -165,6 +176,7 @@ exports.updateUser = async (req, res) => {
       return res.status(400).json({ message: "Email đã được đăng ký" });
     }
 
+    // Chuẩn bị trường cập nhật
     const fieldsToUpdate = {
       tenDangNhap: tenDangNhap || user.tenDangNhap,
       email: email || user.email,
@@ -173,6 +185,7 @@ exports.updateUser = async (req, res) => {
       trangThai: isAdmin ? trangThai || user.trangThai : user.trangThai,
     };
 
+    // Cập nhật avatar nếu có file
     if (req.file) {
       const oldAvatar = user.duongDanAvatar;
       const newAvatarPath = "avatars/" + req.file.filename;
@@ -188,8 +201,34 @@ exports.updateUser = async (req, res) => {
       fieldsToUpdate.duongDanAvatar = newAvatarPath;
     }
 
+    // Cập nhật mật khẩu nếu có yêu cầu đổi
+    if (matKhau) {
+      if (!isAdmin) {
+        if (!matKhauCu) {
+          deleteUploadedFileIfExists(req.file);
+          return res
+            .status(400)
+            .json({ message: "Vui lòng nhập mật khẩu cũ để xác nhận" });
+        }
+
+        const isMatch = await bcrypt.compare(matKhauCu, user.matKhau);
+        if (!isMatch) {
+          deleteUploadedFileIfExists(req.file);
+          return res
+            .status(400)
+            .json({ message: "Mật khẩu cũ không chính xác" });
+        }
+      }
+
+      const hashedPassword = await bcrypt.hash(matKhau, 10);
+      fieldsToUpdate.matKhau = hashedPassword;
+    }
+
     await user.update(fieldsToUpdate);
-    res.json({ message: "Cập nhật thành công", user });
+    const safeUser = user.toJSON();
+    delete safeUser.matKhau;
+
+    res.json({ message: "Cập nhật thành công", user: safeUser });
   } catch (err) {
     deleteUploadedFileIfExists(req.file);
     errorHandler(res, err);

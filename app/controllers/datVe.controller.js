@@ -418,3 +418,96 @@ exports.paymentCalculator = async (req, res) => {
     errorHandler(res, err);
   }
 };
+
+exports.calculateComboTotal = async (req, res) => {
+  try {
+    const { veId, comboList = [], maGiamGia = null } = req.body;
+    const nguoiDungId = req.user.user_id;
+
+    const ve = await Ve.findByPk(veId, {
+      include: [Ghe, LichChieu],
+    });
+
+    if (!ve) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy vé.",
+      });
+    }
+
+    if (ve.nguoiDungId !== nguoiDungId) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền truy cập vé này.",
+      });
+    }
+
+    let maGiam = null;
+    let isMaGiamHopLe = false;
+    let giamGia = 0;
+    let tongTien = 0;
+
+    for (const item of comboList) {
+      if (item.soLuong <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Số lượng combo không hợp lệ.",
+        });
+      }
+
+      const combo = await Combo.findOne({
+        where: { id: item.comboId, daXoa: false },
+      });
+
+      if (!combo) {
+        return res.status(400).json({
+          success: false,
+          message: `Combo không tồn tại: ${item.comboId}`,
+        });
+      }
+
+      tongTien += combo.gia * item.soLuong;
+    }
+
+    if (maGiamGia) {
+      maGiam = await MaGiamGia.findOne({
+        where: { ma: maGiamGia, nguoiDungId, daDung: false },
+        include: [{ model: KhuyenMai }],
+      });
+
+      const now = new Date();
+      const km = maGiam?.KhuyenMai;
+
+      isMaGiamHopLe =
+        !!km &&
+        km.hoatDong &&
+        now >= new Date(km.ngayBatDau) &&
+        now <= new Date(km.ngayKetThuc) &&
+        ["combo", "all"].includes(km.loaiApDung);
+
+      if (!isMaGiamHopLe) {
+        return res.status(400).json({
+          success: false,
+          message: "Mã giảm giá không hợp lệ hoặc không áp dụng cho combo.",
+        });
+      }
+
+      giamGia = Math.floor((tongTien * km.phanTramGiam) / 100);
+    }
+
+    const thanhToanCuoi = tongTien - giamGia;
+
+    res.json({
+      success: true,
+      data: {
+        tongTien,
+        giamGia,
+        thanhToanCuoi,
+        trangThaiMa: maGiamGia ? (isMaGiamHopLe ? "valid" : "invalid") : "none",
+        phanTramGiam: isMaGiamHopLe ? maGiam.KhuyenMai.phanTramGiam : 0,
+      },
+    });
+  } catch (err) {
+    errorHandler(res, err);
+  }
+};
