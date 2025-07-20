@@ -11,7 +11,7 @@ CREATE TABLE nguoiDung (
   duongDanAvatar VARCHAR(255),
   vaiTro ENUM('admin','client') DEFAULT 'client',
   trangThai ENUM('good', 'bad') DEFAULT 'good',
-  taoLuc DATETIME DEFAULT CURRENT_TIMESTAMP
+  taoLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- tài khoản admin
 INSERT INTO nguoiDung (tenDangNhap, matKhau, soDienThoai, duongDanAvatar, vaiTro, trangThai)
@@ -31,7 +31,7 @@ CREATE TABLE chiNhanh (
   diaChi TEXT NOT NULL,
   soDienThoai VARCHAR(20),
   daXoa BOOLEAN DEFAULT FALSE,
-  thoiDiemXoa DATETIME DEFAULT NULL
+  thoiDiemXoa TIMESTAMP DEFAULT NULL
 
 );
 
@@ -42,7 +42,7 @@ CREATE TABLE phongChieu (
   ten VARCHAR(50) NOT NULL,
   tongSoGhe INT NOT NULL,
   daXoa BOOLEAN DEFAULT FALSE,
-  thoiDiemXoa DATETIME DEFAULT NULL,
+  thoiDiemXoa TIMESTAMP DEFAULT NULL,
   FOREIGN KEY (chiNhanhId) REFERENCES chiNhanh(id) ON DELETE CASCADE
 );
 
@@ -52,7 +52,7 @@ CREATE TABLE loaiGhe (
   ten VARCHAR(50) NOT NULL,
   giaPhu DECIMAL(10,2) DEFAULT 0,
   daXoa BOOLEAN DEFAULT FALSE,
-  thoiDiemXoa DATETIME DEFAULT NULL
+  thoiDiemXoa TIMESTAMP DEFAULT NULL
 );
 
 -- Bảng ghế
@@ -75,7 +75,7 @@ CREATE TABLE phim (
   thoiLuong INT NOT NULL,
   ngayKhoiChieu DATE NOT NULL,
   daXoa BOOLEAN DEFAULT FALSE,
-  thoiDiemXoa DATETIME DEFAULT NULL
+  thoiDiemXoa TIMESTAMP DEFAULT NULL
 );
 
 -- Bảng thể loại
@@ -107,8 +107,8 @@ CREATE TABLE lichChieu (
   id INT AUTO_INCREMENT PRIMARY KEY,
   phimId INT NOT NULL,
   phongChieuId INT NOT NULL,
-  batDau DATETIME NOT NULL,
-  ketThuc DATETIME NOT NULL,
+  batDau TIMESTAMP NOT NULL,
+  ketThuc TIMESTAMP NOT NULL,
   giaVe DECIMAL(10,2) NOT NULL DEFAULT 0,
   daXoa BOOLEAN DEFAULT FALSE,
   UNIQUE (phongChieuId, batDau),
@@ -130,7 +130,7 @@ CREATE TABLE ve (
   tenLoaiGhe VARCHAR(50),
   trangThai ENUM('pending', 'unused', 'used', 'expired', 'refunded','cancelled') DEFAULT 'pending',
   daThanhToan BOOLEAN DEFAULT FALSE,
-  muaLuc DATETIME DEFAULT CURRENT_TIMESTAMP,
+  muaLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   maQR VARCHAR(255), 
 
   FOREIGN KEY (nguoiDungId) REFERENCES nguoiDung(id) ON DELETE CASCADE,
@@ -147,7 +147,7 @@ CREATE TABLE combo (
   gia DECIMAL(10,2) NOT NULL,
   duongDanAnh VARCHAR(255),
   daXoa BOOLEAN DEFAULT FALSE,
-  thoiDiemXoa DATETIME DEFAULT NULL
+  thoiDiemXoa TIMESTAMP DEFAULT NULL
 );
 
 -- Bảng combo vé
@@ -171,7 +171,7 @@ CREATE TABLE danhGiaCombo (
   comboId INT NOT NULL,
   diem INT NOT NULL CHECK (diem BETWEEN 1 AND 5),
   binhLuan TEXT,
-  taoLuc DATETIME DEFAULT CURRENT_TIMESTAMP,
+  taoLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (nguoiDungId) REFERENCES nguoiDung(id) ON DELETE CASCADE,
   FOREIGN KEY (comboId) REFERENCES combo(id) ON DELETE CASCADE
 );
@@ -196,8 +196,8 @@ CREATE TABLE maGiamGia (
   khuyenMaiId INT,
   nguoiDungId INT,
   daDung BOOLEAN DEFAULT FALSE,
-  taoLuc DATETIME DEFAULT CURRENT_TIMESTAMP,
-  suDungLuc DATETIME,
+  taoLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  suDungLuc TIMESTAMP DEFAULT NULL,
   FOREIGN KEY (khuyenMaiId) REFERENCES khuyenMai(id) ON DELETE SET NULL,
   FOREIGN KEY (nguoiDungId) REFERENCES nguoiDung(id) ON DELETE CASCADE
 );
@@ -210,7 +210,7 @@ CREATE TABLE danhGiaPhim (
   binhLuanChaId INT DEFAULT NULL,
   diem INT CHECK (diem IS NULL OR diem BETWEEN 1 AND 5),
   binhLuan TEXT,
-  taoLuc DATETIME DEFAULT CURRENT_TIMESTAMP,
+  taoLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (nguoiDungId) REFERENCES nguoiDung(id) ON DELETE CASCADE,
   FOREIGN KEY (phimId) REFERENCES phim(id) ON DELETE CASCADE,
   FOREIGN KEY (binhLuanChaId) REFERENCES danhGiaPhim(id) ON DELETE CASCADE
