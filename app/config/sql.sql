@@ -111,7 +111,6 @@ CREATE TABLE lichChieu (
   ketThuc DATETIME NOT NULL,
   giaVe DECIMAL(10,2) NOT NULL DEFAULT 0,
   daXoa BOOLEAN DEFAULT FALSE,
-  thoiDiemXoa DATETIME DEFAULT NULL,
   UNIQUE (phongChieuId, batDau),
   FOREIGN KEY (phimId) REFERENCES phim(id) ON DELETE CASCADE,
   FOREIGN KEY (phongChieuId) REFERENCES phongChieu(id) ON DELETE CASCADE
@@ -224,7 +223,7 @@ CREATE TABLE thongBao (
   tieuDe VARCHAR(255) NOT NULL,
   noiDung TEXT NOT NULL,
   daDoc BOOLEAN DEFAULT FALSE,
-  taoLuc DATETIME DEFAULT CURRENT_TIMESTAMP,
+  taoLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (nguoiDungId) REFERENCES nguoiDung(id) ON DELETE CASCADE
 );
 
@@ -242,64 +241,65 @@ ON SCHEDULE EVERY 5 MINUTE
 DO
 BEGIN
   -- Cập nhật PENDING -> EXPIRED
-  UPDATE ve v
-  JOIN lichChieu lc ON v.lichChieuId = lc.id
-  SET v.trangThai = 'expired'
-  WHERE v.trangThai = 'pending'
-    AND lc.ketThuc <= NOW();
-
-  -- Khóa người dùng có vé PENDING bị EXPIRED
-  UPDATE nguoiDung
-  SET trangThai = 'bad'
-  WHERE id IN (
-    SELECT nguoiDungId
-    FROM ve v
-    JOIN lichChieu lc ON v.lichChieuId = lc.id
-    WHERE v.trangThai = 'expired'
-      AND v.daThanhToan = FALSE
-      AND lc.ketThuc <= NOW()
+INSERT INTO thongBao (nguoiDungId, tieuDe, noiDung)
+SELECT DISTINCT nd.id,
+       'Tài khoản của bạn đã bị khóa',
+       CONCAT('Bạn đã đặt vé nhưng không thanh toán trước suất chiếu lúc ', lc.batDau, '. Tài khoản hiện bị khóa.')
+FROM ve v
+JOIN lichChieu lc ON v.lichChieuId = lc.id
+  AND lc.ketThuc >= CURDATE()
+  AND lc.ketThuc < CURDATE() + INTERVAL 1 DAY
+JOIN nguoiDung nd ON v.nguoiDungId = nd.id
+WHERE v.trangThai = 'pending'
+  AND lc.ketThuc <= NOW()
+  AND nd.trangThai = 'good'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM thongBao tb
+    WHERE tb.nguoiDungId = nd.id
+      AND tb.tieuDe = 'Tài khoản của bạn đã bị khóa'
+      AND tb.taoLuc >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
   );
-
-  -- Thông báo khóa tài khoản
-  INSERT INTO thongBao (nguoiDungId, tieuDe, noiDung)
-  SELECT v.nguoiDungId,
-         'Tài khoản của bạn đã bị khóa',
-         CONCAT('Bạn đã đặt vé nhưng không thanh toán trước suất chiếu lúc ', lc.batDau, '. Tài khoản hiện bị khóa.')
-  FROM ve v
-  JOIN lichChieu lc ON v.lichChieuId = lc.id
-  WHERE v.trangThai = 'expired'
-    AND v.daThanhToan = FALSE
-    AND lc.ketThuc <= NOW()
-    AND NOT EXISTS (
-      SELECT 1 FROM thongBao tb
-      WHERE tb.nguoiDungId = v.nguoiDungId
-        AND tb.tieuDe = 'Tài khoản của bạn đã bị khóa'
-        AND tb.taoLuc >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-    );
+-- Cập nhật vé PENDING → EXPIRED và đồng thời khóa người dùng liên quan
+UPDATE ve v
+JOIN lichChieu lc ON v.lichChieuId = lc.id
+    AND lc.ketThuc >= CURDATE()
+    AND lc.ketThuc < CURDATE() + INTERVAL 1 DAY
+JOIN nguoiDung nd ON v.nguoiDungId = nd.id
+SET 
+  v.trangThai = 'expired',
+  nd.trangThai = 'bad'
+WHERE v.trangThai = 'pending'
+  AND lc.ketThuc <= NOW();
 
   -- UNUSED → EXPIRED
-  UPDATE ve v
-  JOIN lichChieu lc ON v.lichChieuId = lc.id
+--  Lấy người dùng cần thông báo
+INSERT INTO thongBao (nguoiDungId, tieuDe, noiDung)
+SELECT DISTINCT nd.id,
+       'Vé của bạn đã bị hủy do không sử dụng',
+       CONCAT('Vé cho suất chiếu lúc ', lc.batDau, ' đã hết hạn do bạn không sử dụng.')
+FROM ve v
+JOIN lichChieu lc ON v.lichChieuId = lc.id
+  AND lc.ketThuc >= CURDATE()
+  AND lc.ketThuc < CURDATE() + INTERVAL 1 DAY
+JOIN nguoiDung nd ON v.nguoiDungId = nd.id
+WHERE v.trangThai = 'unused'
+  AND lc.ketThuc <= NOW()
+  AND NOT EXISTS (
+    SELECT 1 FROM thongBao tb
+    WHERE tb.nguoiDungId = nd.id
+      AND tb.tieuDe = 'Vé của bạn đã bị hủy do không sử dụng'
+      AND tb.taoLuc >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+  );
+-- cập nhật vé
+UPDATE ve v
+JOIN lichChieu lc ON v.lichChieuId = lc.id
   SET v.trangThai = 'expired'
   WHERE v.trangThai = 'unused'
     AND lc.ketThuc <= NOW();
-
-  -- Thông báo vé hủy
-  INSERT INTO thongBao (nguoiDungId, tieuDe, noiDung)
-  SELECT v.nguoiDungId,
-         'Vé của bạn đã bị hủy do không sử dụng',
-         CONCAT('Vé cho suất chiếu lúc ', lc.batDau, ' đã hết hạn do bạn không sử dụng.')
-  FROM ve v
-  JOIN lichChieu lc ON v.lichChieuId = lc.id
-  WHERE v.trangThai = 'expired'
-    AND v.daThanhToan = TRUE
-    AND lc.ketThuc <= NOW()
-    AND NOT EXISTS (
-      SELECT 1 FROM thongBao tb
-      WHERE tb.nguoiDungId = v.nguoiDungId
-        AND tb.tieuDe = 'Vé của bạn đã bị hủy do không sử dụng'
-        AND tb.taoLuc >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-    );
 END $$
-
 DELIMITER ;
+
+
+
+
