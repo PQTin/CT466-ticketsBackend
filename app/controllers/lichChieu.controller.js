@@ -24,6 +24,13 @@ exports.createShowtime = async (req, res) => {
         message: "Phim hoặc phòng chiếu không tồn tại.",
       });
 
+    if (new Date(batDau) >= new Date(ketThuc)) {
+      return res.status(400).json({
+        success: false,
+        message: "Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc.",
+      });
+    }
+
     const conflict = await LichChieu.findOne({
       where: {
         phongChieuId,
@@ -240,6 +247,12 @@ exports.updateShowtime = async (req, res) => {
         success: false,
         message:
           "Suất chiếu sắp bắt đầu trong vòng 24 giờ. Không thể cập nhật.",
+      });
+    }
+    if (new Date(batDau) >= new Date(ketThuc)) {
+      return res.status(400).json({
+        success: false,
+        message: "Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc.",
       });
     }
     const conflict = await LichChieu.findOne({

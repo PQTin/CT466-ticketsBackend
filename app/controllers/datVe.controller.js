@@ -42,7 +42,13 @@ exports.bookTicket = async (req, res) => {
     }
 
     const existed = await Ve.findOne({
-      where: { lichChieuId, gheId },
+      where: {
+        lichChieuId,
+        gheId,
+        trangThai: {
+          [Op.in]: ["pending", "unused"],
+        },
+      },
       transaction: t,
     });
     if (existed) {

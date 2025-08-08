@@ -14,7 +14,7 @@ CREATE TABLE nguoiDung (
   taoLuc TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- tài khoản admin
-INSERT INTO nguoiDung (tenDangNhap, matKhau, soDienThoai, duongDanAvatar, vaiTro, trangThai)
+INSERT INTO nguoiDung (tenDangNhap, matKhau, soDienThoai, email, duongDanAvatar, vaiTro, trangThai)
 VALUES (
     'tin123',
     '$2b$10$OMYfQv3l3OQrTejhxALfJ.Hc/El8uF7lOEpDHDeZ0pRxVtcr5XICm',
